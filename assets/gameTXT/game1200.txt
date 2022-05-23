@@ -1,0 +1,90 @@
+from datetime import datetime
+
+import pygame
+import time
+
+from src.config.Config import Config
+from src.loadAssets.assets import Assets
+from src.player.movesController import MovesController
+from src.player.player import Player
+
+class Game:
+
+    FPS = 30
+    run = True
+    time = pygame.time.Clock()
+    BLACK = (0, 0, 0)
+    WHITE = (255, 255, 255)
+
+    def __init__(self):
+        self.players = []
+        self.assets = Assets(self)
+        self.config = Config()
+        self.cur_player = None
+        self.maxlab = 3
+        pygame.font.init()
+        self.font = pygame.font.Font('assets/fonts/Dodgv2.ttf', 36)
+        self.font2 = pygame.font.Font('assets/fonts/911v2.ttf', 30)
+        self.font3 = pygame.font.Font('assets/fonts/Dodgv2.ttf', 15)
+        self.img = self.font.render('Cars Racing', False, self.BLACK)
+        self.labinfo = self.font3.render('Labs', False, self.WHITE)
+        self.speedinfo = self.font3.render('km/h', False, self.WHITE)
+        self.timeinfo = self.font3.render('Time', False, self.WHITE)
+        self.showTimer = 60
+        self.clock = pygame.time.Clock()
+        self.game()
+
+    def constDraw(self):
+        self.screen.blit(self.assets.grass, (0, 0))
+        self.screen.blit(self.img, (40, 720))
+
+    def draw(self, screen, assets):
+        for img, pos in assets:
+            screen.blit(img, pos)
+        for player in self.players:
+            player.draw()
+        self.draw_dashBoard()
+
+    def draw_dashBoard(self):
+        self.screen.blit(self.assets.dashboard, (20, 800))
+        lab_number = 1
+        if self.cur_player.player.lab > 0:
+            lab_number = self.cur_player.player.lab
+
+        lab = self.font2.render(str(lab_number) + '/' + str(self.maxlab), False, self.WHITE)
+        self.screen.blit(self.labinfo, (75, 930))
+        self.screen.blit(lab, (70, 900))
+        speed = self.font2.render(str("{0:03}".format(int(self.cur_player.player.speed * 40))), False, self.WHITE)
+        self.screen.blit(speed, (225, 910))
+        m, s = divmod(int(pygame.time.get_ticks()/1000), 60)
+        if int(60 - s) == self.showTimer:
+            self.showTimerBonus()
+
+        clock = self.font2.render('{:01d}:{:02d}'.format(m, s), False, self.WHITE)
+        self.screen.blit(self.timeinfo, (385, 900))
+        self.screen.blit(clock, (385, 910))
+
+    def showTimerBonus(self):
+        #self.screen.blit(self.assets.timeBonus, (490, 150))
+        pass
+
+    def game(self):
+        self.screen = pygame.display.set_mode((self.assets.width, self.assets.height))
+        pygame.display.set_caption("Racing Game")
+        assets = [(self.assets.track, (0, 0)), (self.assets.borders, (0, 0)), (self.assets.start, (1013, 350))]
+        self.players.append(Player(self, self.config, 1, None, 6, 4))
+        self.players.append(Player(self, self.config, 2, None, 6, 4))
+        self.cur_player = MovesController(self, self.players[0])
+        self.constDraw()
+        while self.run:
+            self.time.tick(self.FPS)
+            self.draw(self.screen, assets)
+            if self.cur_player.player.playing:
+                self.cur_player.on()
+            pygame.display.update()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.run = False
+                    break
+
+        pygame.quit()
